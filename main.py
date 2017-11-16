@@ -5,6 +5,12 @@ from random import randint
 
 client_id = "a3e059563d7fd3372b49b37f00a00bcf"
 iterations = 10
+follower_min = 10000
+
+duplicate_count = 0
+low_follower_count = 0
+no_contact_count = 0
+good_count = 0
 
 class SoundCloudUser:
     def __init__(self, username=None, id=None):
@@ -38,15 +44,20 @@ class SoundCloudUser:
         return contacts
     
     def print_data(self):
-        print(self.username + " :: " + self.userId + " :: " + self.contacts + " :: " + self.follow_count + " :: " + self.url)
+        return (self.username + " :: " + str(self.userId) + " :: " + self.contacts + " :: " + str(self.follow_count) + " :: " + self.url)
+    
+    def get_summary(self):
+        return 'Name: {:>24}  Followers: {:>10}  Contacts: {:>3}'.format(self.username, str(self.follow_count), str(len(self.contacts.split())))
     
     def gather_data(self):
         api = ("http://api.soundcloud.com/users/" + str(self.id) + "?client_id=" + client_id)
         r = requests.get(api)    
         try:
             self.username = str(r.json()['username'])
-            self.userId = str(r.json()['id'])
-            
+            self.userId = r.json()['id']
+            self.follow_count = r.json()['followers_count']
+            self.url = str("https://soundcloud.com/" + str(r.json()['permalink']))
+
             desc = str(r.json()['description']).replace('\n', " ")
             words = desc.split()
             contacts = ""
@@ -55,10 +66,6 @@ class SoundCloudUser:
                     contacts += " " + word 
             contacts = str(contacts)
             self.contacts = contacts
-            
-            self.follow_count = str(r.json()['followers_count'])
-            self.url = str("https://soundcloud.com/" + str(r.json()['permalink']))
-            
         except:
             print("Invalid Response :: Print Data")
             
@@ -93,7 +100,6 @@ class SpreadSheet:
         for cell in self.sheet["A"]:
             #print(str(cell.value) + " == " + str(id) + " --> " + str(cell.value == id))
             if str(cell.value) == str(id):
-                print("Duplicate!!! --> " + str(id))
                 return True
         return False
     
@@ -116,8 +122,19 @@ for x in range(0, iterations):
         
         read_duplicate = read.id_exists(follow_user.userId)
         write_duplicate = write.id_exists(follow_user.userId)
-        if read_duplicate == False and write_duplicate == False:
-            follow_user.print_data()
+        
+        if read_duplicate == True or write_duplicate == True:
+            duplicate_count += 1
+            print("Duplicate              --> " + follow_user.get_summary())
+        elif follow_user.contacts == "": 
+            no_contact_count += 1
+            print("No Contacts            --> " + follow_user.get_summary())
+        elif follow_user.follow_count < follower_min: 
+            low_follower_count += 1
+            print("Too Little Followers   --> " + follow_user.get_summary())
+        else:
+            good_count += 1
+            print("Good                   --> " + follow_user.get_summary())
             empty_row = write.get_first_empty_row()
             write.set_cell(empty_row, 1, follow_user.userId)
             write.set_cell(empty_row, 2, follow_user.username)
@@ -128,5 +145,17 @@ for x in range(0, iterations):
     length = len(list) - 1
     user = SoundCloudUser(None, list[randint(0, length)]['id'])
     list = user.follower_list()
+
+print("")
+print("Duplicates:    " + str(duplicate_count))
+print("Low Followers: " + str(low_follower_count))
+print("No Contacts:   " + str(no_contact_count))
+print("Good:          " + str(good_count))
+
+try:    
+    write.save()
+except:
+    print("ERROR SAVING")
+    print("    Make sure to delete add_to_catalogue.xlsx before running script")
     
-write.save()
+    
