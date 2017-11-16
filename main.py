@@ -1,11 +1,8 @@
-#import libraries
-import urllib
-import soundcloud
 import requests
-from bs4 import BeautifulSoup
 
 client_id = "a3e059563d7fd3372b49b37f00a00bcf"
 iterations = 5
+
 
 class SoundCloudUser:
     def __init__(self, username=None, id=None):
