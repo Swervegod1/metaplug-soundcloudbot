@@ -120,7 +120,7 @@ def main(argv):
 
     for opt, arg in opts:
         if opt == '-h':
-            print('main.py -i <iterations> -f <follower min>')
+            print('main.py -i <iterations> -f <follower_min>')
             print('Defaults: iterations = 10, follower min = 10000')
             sys.exit()
         elif opt in ('-i', '--iterations'):
