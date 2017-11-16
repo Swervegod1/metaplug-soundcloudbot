@@ -2,15 +2,11 @@ import requests
 import openpyxl
 from xlutils.view import View
 from random import randint
+import sys
+import getopt
 
 client_id = "a3e059563d7fd3372b49b37f00a00bcf"
-iterations = 10
-follower_min = 10000
 
-duplicate_count = 0
-low_follower_count = 0
-no_contact_count = 0
-good_count = 0
 
 class SoundCloudUser:
     def __init__(self, username=None, id=None):
@@ -47,7 +43,7 @@ class SoundCloudUser:
         return (self.username + " :: " + str(self.userId) + " :: " + self.contacts + " :: " + str(self.follow_count) + " :: " + self.url)
     
     def get_summary(self):
-        return 'Name: {:>24}  Followers: {:>10}  Contacts: {:>3}'.format(self.username, str(self.follow_count), str(len(self.contacts.split())))
+        return 'Name: {:>32}  Followers: {:>10}  Contacts: {:>3}'.format(self.username, str(self.follow_count), str(len(self.contacts.split())))
     
     def gather_data(self):
         api = ("http://api.soundcloud.com/users/" + str(self.id) + "?client_id=" + client_id)
@@ -70,6 +66,7 @@ class SoundCloudUser:
             print("Invalid Response :: Print Data")
             
 
+            
 class SpreadSheet:
     def __init__(self, name, is_view):
         self.name = name
@@ -108,54 +105,87 @@ class SpreadSheet:
             self.wb.save(self.name)
         
 #main
-user = SoundCloudUser("alex_shortt", None)
-list = user.follower_list()
-count = 0;
 
-read = SpreadSheet("catalogue.xlsx", True)
-write = SpreadSheet("add_to_catalogue.xlsx", False)
-
-for x in range(0, iterations):
-    for val in list:
-        follow_user = SoundCloudUser(None, val['id'])
-        follow_user.gather_data()
-        
-        read_duplicate = read.id_exists(follow_user.userId)
-        write_duplicate = write.id_exists(follow_user.userId)
-        
-        if read_duplicate == True or write_duplicate == True:
-            duplicate_count += 1
-            print("Duplicate              --> " + follow_user.get_summary())
-        elif follow_user.contacts == "": 
-            no_contact_count += 1
-            print("No Contacts            --> " + follow_user.get_summary())
-        elif follow_user.follow_count < follower_min: 
-            low_follower_count += 1
-            print("Too Little Followers   --> " + follow_user.get_summary())
-        else:
-            good_count += 1
-            print("Good                   --> " + follow_user.get_summary())
-            empty_row = write.get_first_empty_row()
-            write.set_cell(empty_row, 1, follow_user.userId)
-            write.set_cell(empty_row, 2, follow_user.username)
-            write.set_cell(empty_row, 3, follow_user.contacts)
-            write.set_cell(empty_row, 4, follow_user.follow_count)
-            write.set_cell(empty_row, 5, follow_user.url)
-            
-    length = len(list) - 1
-    user = SoundCloudUser(None, list[randint(0, length)]['id'])
-    list = user.follower_list()
-
-print("")
-print("Duplicates:    " + str(duplicate_count))
-print("Low Followers: " + str(low_follower_count))
-print("No Contacts:   " + str(no_contact_count))
-print("Good:          " + str(good_count))
-
-try:    
-    write.save()
-except:
-    print("ERROR SAVING")
-    print("    Make sure to delete add_to_catalogue.xlsx before running script")
+def main(argv):
+    iterations = 10
+    follower_min = 10000
     
+    try:
+        opts, args = getopt.getopt(argv, "hi:f:", ["iterations=", "follow_min="])
+    except getopt.GetoptError:
+        print('Invalid Arguments')
+        print('main.py -i <iterations> -f <follower min>')
+        print('Defaults: iterations = 10, follower min = 10000')
+        sys.exit(2)
+
+    for opt, arg in opts:
+        if opt == '-h':
+            print('main.py -i <iterations> -f <follower min>')
+            print('Defaults: iterations = 10, follower min = 10000')
+            sys.exit()
+        elif opt in ('-i', '--iterations'):
+            iterations = int(arg)
+        elif opt in ('-f', '--follow_min'):
+            follower_min = int(arg)
+
+    print("Running " + str(iterations) + " iterations with " + str(follower_min) + " minimum followers")
+    
+    user = SoundCloudUser("alex_shortt", None)
+    list = user.follower_list()
+    count = 0;
+
+    read = SpreadSheet("catalogue.xlsx", True)
+    write = SpreadSheet("add_to_catalogue.xlsx", False)
+    duplicate_count = 0
+    low_follower_count = 0
+    no_contact_count = 0
+    good_count = 0
+    
+    for x in range(0, iterations):
+        for val in list:
+            follow_user = SoundCloudUser(None, val['id'])
+            follow_user.gather_data()
+
+            read_duplicate = read.id_exists(follow_user.userId)
+            write_duplicate = write.id_exists(follow_user.userId)
+
+            if read_duplicate == True or write_duplicate == True:
+                duplicate_count += 1
+                print("Duplicate              --> " + follow_user.get_summary())
+            elif follow_user.contacts == "": 
+                no_contact_count += 1
+                print("No Contacts            --> " + follow_user.get_summary())
+            elif follow_user.follow_count < follower_min: 
+                low_follower_count += 1
+                print("Too Little Followers   --> " + follow_user.get_summary())
+            else:
+                good_count += 1
+                print("Good                   --> " + follow_user.get_summary())
+                empty_row = write.get_first_empty_row()
+                write.set_cell(empty_row, 1, follow_user.userId)
+                write.set_cell(empty_row, 2, follow_user.username)
+                write.set_cell(empty_row, 3, follow_user.contacts)
+                write.set_cell(empty_row, 4, follow_user.follow_count)
+                write.set_cell(empty_row, 5, follow_user.url)
+
+        length = len(list) - 1
+        if length <= 0: 
+            break
+        user = SoundCloudUser(None, list[randint(0, length)]['id'])
+        list = user.follower_list()
+
+    print("")
+    print("Duplicates:    " + str(duplicate_count))
+    print("Low Followers: " + str(low_follower_count))
+    print("No Contacts:   " + str(no_contact_count))
+    print("Good:          " + str(good_count))
+
+    try:    
+        write.save()
+    except:
+        print("")
+        print("ERROR SAVING: Make sure to delete add_to_catalogue.xlsx before running script")
+    
+if __name__ == "__main__":
+    main(sys.argv[1:])
     
