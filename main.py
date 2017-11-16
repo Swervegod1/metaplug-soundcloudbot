@@ -1,12 +1,10 @@
 import requests
 import openpyxl
 from xlutils.view import View
-from os.path import join
-
+from random import randint
 
 client_id = "a3e059563d7fd3372b49b37f00a00bcf"
 iterations = 10
-
 
 class SoundCloudUser:
     def __init__(self, username=None, id=None):
@@ -39,6 +37,9 @@ class SoundCloudUser:
                 contacts += " " + word 
         return contacts
     
+    def print_data(self):
+        print(self.username + " :: " + self.userId + " :: " + self.contacts + " :: " + self.follow_count + " :: " + self.url)
+    
     def gather_data(self):
         api = ("http://api.soundcloud.com/users/" + str(self.id) + "?client_id=" + client_id)
         r = requests.get(api)    
@@ -50,7 +51,7 @@ class SoundCloudUser:
             words = desc.split()
             contacts = ""
             for word in words:
-                if "@" in word:
+                if "@" in word and "." in word:
                     contacts += " " + word 
             contacts = str(contacts)
             self.contacts = contacts
@@ -58,7 +59,6 @@ class SoundCloudUser:
             self.follow_count = str(r.json()['followers_count'])
             self.url = str("https://soundcloud.com/" + str(r.json()['permalink']))
             
-            print(self.username + " :: " + self.userId + " :: " + self.contacts + " :: " + self.follow_count + " :: " + self.url)
         except:
             print("Invalid Response :: Print Data")
             
@@ -75,29 +75,31 @@ class SpreadSheet:
         
     def set_cell(self, row, col, val):
         if self.is_view is not True:
-            print(str(col) + str(row))
-            self.sheet[str(col) + str(row)] = str(val)
+            self.sheet.cell(row = row, column = col).value = val
             
     def view_cell(self, row, col):
         return self.sheet[str(col) + str(row)]
     
     def get_first_empty_row(self):
-        first_empty_row = 0
+        first_empty_row = 1
         for cell in self.sheet["A"]:
             if cell.value:
                 first_empty_row += 1
             else:
                 return first_empty_row
+        return first_empty_row
     
     def id_exists(self, id):
-        for cellObj in self.sheet["A"]:
-            if cellObj.value == id:
+        for cell in self.sheet["A"]:
+            #print(str(cell.value) + " == " + str(id) + " --> " + str(cell.value == id))
+            if str(cell.value) == str(id):
+                print("Duplicate!!! --> " + str(id))
                 return True
         return False
     
     def save(self):
         if self.is_view is not True:
-            wb.save(self.name)
+            self.wb.save(self.name)
         
 #main
 user = SoundCloudUser("alex_shortt", None)
@@ -112,15 +114,19 @@ for x in range(0, iterations):
         follow_user = SoundCloudUser(None, val['id'])
         follow_user.gather_data()
         
-        if not read.id_exists(follow_user.userId) and not write.id_exists(follow_user.userId):
+        read_duplicate = read.id_exists(follow_user.userId)
+        write_duplicate = write.id_exists(follow_user.userId)
+        if read_duplicate == False and write_duplicate == False:
+            follow_user.print_data()
             empty_row = write.get_first_empty_row()
-            print(empty_row)
-            write.set_cell(empty_row, "A", follow_user.userId)
-            write.set_cell(empty_row, "B", follow_user.contacts)
-            write.set_cell(empty_row, "C", follow_user.follow_count)
-            write.set_cell(empty_row, "D", follow_user.url)
+            write.set_cell(empty_row, 1, follow_user.userId)
+            write.set_cell(empty_row, 2, follow_user.username)
+            write.set_cell(empty_row, 3, follow_user.contacts)
+            write.set_cell(empty_row, 4, follow_user.follow_count)
+            write.set_cell(empty_row, 5, follow_user.url)
             
-    user = SoundCloudUser(None, list[0]['id'])
+    length = len(list) - 1
+    user = SoundCloudUser(None, list[randint(0, length)]['id'])
     list = user.follower_list()
     
 write.save()
