@@ -5,8 +5,8 @@ from random import randint
 import sys
 import getopt
 
-client_id = "a3e059563d7fd3372b49b37f00a00bcf"
 
+client_id = "a3e059563d7fd3372b49b37f00a00bcf"
 
 class SoundCloudUser:
     def __init__(self, username=None, id=None):
@@ -109,28 +109,31 @@ class SpreadSheet:
 def main(argv):
     iterations = 10
     follower_min = 10000
+    start_artist = "alex_shortt"
     
     try:
-        opts, args = getopt.getopt(argv, "hi:f:", ["iterations=", "follow_min="])
+        opts, args = getopt.getopt(argv, "hi:f:s:", ["iterations=", "follow_min=", "start_artist="])
     except getopt.GetoptError:
         print('Invalid Arguments')
-        print('main.py -i <iterations> -f <follower min>')
-        print('Defaults: iterations = 10, follower min = 10000')
+        print('main.py -i <iterations> -f <follower_min> -s <start_artist>')
+        print('Defaults: iterations = 10, follower min = 10000, start_artist=alex_shortt')
         sys.exit(2)
 
     for opt, arg in opts:
         if opt == '-h':
-            print('main.py -i <iterations> -f <follower_min>')
-            print('Defaults: iterations = 10, follower min = 10000')
+            print('main.py -i <iterations> -f <follower_min> -s <start_artist>')
+            print('Defaults: iterations = 10, follower min = 10000, start_artist=alex_shortt')
             sys.exit()
         elif opt in ('-i', '--iterations'):
             iterations = int(arg)
         elif opt in ('-f', '--follow_min'):
             follower_min = int(arg)
+        elif opt in ('-s', '--start_artist'):
+            start_artist = arg
 
     print("Running " + str(iterations) + " iterations with " + str(follower_min) + " minimum followers")
     
-    user = SoundCloudUser("alex_shortt", None)
+    user = SoundCloudUser(start_artist, None)
     list = user.follower_list()
     count = 0;
 
@@ -170,8 +173,10 @@ def main(argv):
 
         length = len(list) - 1
         if length <= 0: 
-            break
-        user = SoundCloudUser(None, list[randint(0, length)]['id'])
+            user = SoundCloudUser(start_artist, None)
+        else:
+            user = SoundCloudUser(None, list[randint(0, length)]['id'])
+            
         list = user.follower_list()
 
     print("")
