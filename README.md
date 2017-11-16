@@ -2,10 +2,8 @@
 Scrape Soundcloud for artists info (managers, followers, etc)
 
 How To Use:
-1. run main.py
+1. run main.py: main.py -i \<iterations\> -f \<follower_min\>
 
-    main.py -i <iterations> -f <follower_min>
-    
     iterations (default 10): number of users to recurse. each user will give about 50 more users
         
     follower_min (default 10000): minimum number of followers to be accepted
